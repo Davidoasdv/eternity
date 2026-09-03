@@ -4,6 +4,7 @@ require_once 'includes/auth.php';
 requireAuth();
 require_once 'includes/functions.php';
 
+// Proses CRUD
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? 'create';
     $data = [
@@ -12,20 +13,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'event_date' => $_POST['event_date'] ?? date('Y-m-d'),
         'location' => $_POST['location'] ?? ''
     ];
+    
     if ($action === 'create') {
         createRecord('timeline', $data);
+        redirect('timeline.php');
     } elseif ($action === 'update' && isset($_POST['id'])) {
         updateRecord('timeline', $_POST['id'], $data);
+        redirect('timeline.php');
     }
-    redirect('/eternity/timeline.php');
 }
 
 if (isset($_GET['delete'])) {
     deleteRecord('timeline', $_GET['delete']);
-    redirect('/eternity/timeline.php');
+    redirect('timeline.php');
 }
 
 $timeline = getAll('timeline');
+// Urutkan berdasarkan event_date descending
 usort($timeline, function($a, $b) {
     return strtotime($a['event_date']) - strtotime($b['event_date']);
 });
@@ -33,10 +37,10 @@ usort($timeline, function($a, $b) {
 <?php $page_title = 'Timeline'; include 'includes/header.php'; include 'includes/navbar.php'; ?>
 <div class="container">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-        <h1>📜 Timeline</h1>
-        <button class="btn btn-secondary" onclick="openModal(`<?php echo escape('
+        <h1>Timeline</h1>
+        <button class="btn btn-secondary" onclick="openModal(`<?php echo htmlspecialchars('
             <h2>Tambah Timeline</h2>
-            <form method="POST">
+            <form method="POST" action="timeline.php">
                 <input type="hidden" name="action" value="create">
                 <div class="form-group"><label>Judul</label><input type="text" name="title" required></div>
                 <div class="form-group"><label>Deskripsi</label><textarea name="description" rows="3"></textarea></div>
@@ -44,34 +48,37 @@ usort($timeline, function($a, $b) {
                 <div class="form-group"><label>Lokasi</label><input type="text" name="location"></div>
                 <button type="submit" class="btn">Simpan</button>
             </form>
-        '); ?>`)">Tambah</button>
+        '); ?>`)">Tambah Timeline</button>
     </div>
     <div style="margin-top:20px;">
         <?php if (empty($timeline)): ?>
-            <div class="empty-state"><div class="emoji">📖</div><p>Belum ada timeline. Mulai catat ceritamu.</p></div>
+            <div class="empty-state">
+                <div class="emoji">📖</div>
+                <p>Belum ada timeline. Mulai catat ceritamu.</p>
+            </div>
         <?php else: ?>
             <?php foreach ($timeline as $item): ?>
                 <div class="card timeline-item" style="margin-bottom:20px;">
                     <div class="date"><?php echo formatDate($item['event_date']); ?></div>
-                    <h3><?php echo escape($item['title']); ?></h3>
-                    <p><?php echo escape($item['description'] ?? ''); ?></p>
+                    <h3><?php echo htmlspecialchars($item['title']); ?></h3>
+                    <p><?php echo htmlspecialchars($item['description'] ?? ''); ?></p>
                     <?php if (!empty($item['location'])): ?>
-                        <span class="badge">📍 <?php echo escape($item['location']); ?></span>
+                        <span class="badge">📍 <?php echo htmlspecialchars($item['location']); ?></span>
                     <?php endif; ?>
                     <div style="margin-top:10px; display:flex; gap:10px;">
-                        <button class="btn btn-secondary" onclick="openModal(`<?php echo escape('
+                        <button class="btn btn-secondary" onclick="openModal(`<?php echo htmlspecialchars('
                             <h2>Edit Timeline</h2>
-                            <form method="POST">
+                            <form method="POST" action="timeline.php">
                                 <input type="hidden" name="action" value="update">
                                 <input type="hidden" name="id" value="' . $item['id'] . '">
-                                <div class="form-group"><label>Judul</label><input type="text" name="title" value="' . escape($item['title']) . '" required></div>
-                                <div class="form-group"><label>Deskripsi</label><textarea name="description" rows="3">' . escape($item['description'] ?? '') . '</textarea></div>
+                                <div class="form-group"><label>Judul</label><input type="text" name="title" value="' . htmlspecialchars($item['title']) . '" required></div>
+                                <div class="form-group"><label>Deskripsi</label><textarea name="description" rows="3">' . htmlspecialchars($item['description'] ?? '') . '</textarea></div>
                                 <div class="form-group"><label>Tanggal</label><input type="date" name="event_date" value="' . $item['event_date'] . '" required></div>
-                                <div class="form-group"><label>Lokasi</label><input type="text" name="location" value="' . escape($item['location'] ?? '') . '"></div>
+                                <div class="form-group"><label>Lokasi</label><input type="text" name="location" value="' . htmlspecialchars($item['location'] ?? '') . '"></div>
                                 <button type="submit" class="btn">Update</button>
                             </form>
                         '); ?>`)">Edit</button>
-                        <a href="/eternity/timeline.php?delete=<?php echo $item['id']; ?>" class="btn" style="background:#000;color:#fff;" onclick="return confirm('Yakin hapus?')">Hapus</a>
+                        <a href="timeline.php?delete=<?php echo $item['id']; ?>" class="btn" style="background:#000;color:#fff;" onclick="return confirm('Yakin hapus?')">Hapus</a>
                     </div>
                 </div>
             <?php endforeach; ?>
