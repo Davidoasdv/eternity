@@ -50,10 +50,10 @@ $totalWishlist = count($wishlist);
             <span class="badge">⭐ <?php echo $totalWishlist; ?> Wishlist</span>
         </div>
         <div style="margin-top:30px; display:flex; gap:15px; justify-content:center; flex-wrap:wrap;">
-            <a href="/eternity/story.php" class="btn btn-blue">Our Story</a>
-            <a href="/eternity/letters.php" class="btn">Letters</a>
-            <a href="/eternity/wishlist.php" class="btn btn-secondary">Wishlist</a>
-        </div>
+    <a href="story.php" class="btn btn-blue">Our Story</a>
+    <a href="letters.php" class="btn">Letters</a>
+    <a href="wishlist.php" class="btn btn-secondary">Wishlist</a>
+</div>
     </div>
 </div>
 <?php include 'includes/footer.php'; ?>
