@@ -5,40 +5,36 @@ requireAuth();
 require_once 'includes/functions.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? 'create';
     $data = [
         'name' => $_POST['name'] ?? '',
         'description' => $_POST['description'] ?? '',
         'category' => $_POST['category'] ?? '',
         'status' => $_POST['status'] ?? 'DREAM',
-        'target_date' => !empty($_POST['target_date']) ? $_POST['target_date'] : null
+        'target_date' => $_POST['target_date'] ?? null
     ];
-    if ($action === 'create') {
-        createRecord('places', $data);
-    } elseif ($action === 'update' && isset($_POST['id'])) {
+    
+    if (isset($_POST['id']) && !empty($_POST['id'])) {
         updateRecord('places', $_POST['id'], $data);
+    } else {
+        createRecord('places', $data);
     }
-    redirect('/eternity/places.php');
+    redirect('places.php');
 }
 
 if (isset($_GET['delete'])) {
     deleteRecord('places', $_GET['delete']);
-    redirect('/eternity/places.php');
+    redirect('places.php');
 }
 
-$items = getAll('places');
-usort($items, function($a, $b) {
-    return strtotime($b['created_at']) - strtotime($a['created_at']);
-});
+$places = getAll('places');
 ?>
 <?php $page_title = 'Places'; include 'includes/header.php'; include 'includes/navbar.php'; ?>
 <div class="container">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-        <h1>📍 Places to Visit</h1>
-        <button class="btn btn-secondary" onclick="openModal(`<?php echo escape('
+        <h1>Places to Visit</h1>
+        <button class="btn btn-secondary" onclick="openModal(`<?php echo htmlspecialchars('
             <h2>Tambah Tempat</h2>
-            <form method="POST">
-                <input type="hidden" name="action" value="create">
+            <form method="POST" action="places.php">
                 <div class="form-group"><label>Nama Tempat</label><input type="text" name="name" required></div>
                 <div class="form-group"><label>Deskripsi</label><textarea name="description" rows="3"></textarea></div>
                 <div class="form-group">
@@ -63,66 +59,64 @@ usort($items, function($a, $b) {
                 <div class="form-group"><label>Target Date</label><input type="date" name="target_date"></div>
                 <button type="submit" class="btn">Simpan</button>
             </form>
-        '); ?>`)">Tambah</button>
+        '); ?>`)">Tambah Tempat</button>
     </div>
     <div style="margin-top:20px;">
-        <?php if (empty($items)): ?>
-            <div class="empty-state"><div class="emoji">📍</div><p>Belum ada tempat.</p></div>
-        <?php else: ?>
-            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:20px;">
-                <?php foreach ($items as $item): ?>
-                    <div class="card">
-                        <div style="display:flex; justify-content:space-between; align-items:start;">
-                            <h3>📍 <?php echo escape($item['name']); ?></h3>
-                            <span class="badge <?php echo $item['status'] === 'VISITED' ? 'badge-green' : 'badge-blue'; ?>">
-                                <?php echo escape($item['status'] ?? 'DREAM'); ?>
-                            </span>
-                        </div>
-                        <p><?php echo escape($item['description'] ?? ''); ?></p>
-                        <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
-                            <?php if (!empty($item['category'])): ?>
-                                <span class="badge"><?php echo escape($item['category']); ?></span>
-                            <?php endif; ?>
-                            <?php if (!empty($item['target_date'])): ?>
-                                <span class="badge">📅 <?php echo formatDate($item['target_date']); ?></span>
-                            <?php endif; ?>
-                        </div>
-                        <div style="margin-top:15px; display:flex; gap:10px;">
-                            <button class="btn btn-secondary" style="padding:6px 12px;font-size:0.8rem;" onclick="openModal(`<?php echo escape('
-                                <h2>Edit Tempat</h2>
-                                <form method="POST">
-                                    <input type="hidden" name="action" value="update">
-                                    <input type="hidden" name="id" value="' . $item['id'] . '">
-                                    <div class="form-group"><label>Nama Tempat</label><input type="text" name="name" value="' . escape($item['name']) . '" required></div>
-                                    <div class="form-group"><label>Deskripsi</label><textarea name="description" rows="3">' . escape($item['description'] ?? '') . '</textarea></div>
-                                    <div class="form-group">
-                                        <label>Kategori</label>
-                                        <select name="category">
-                                            <option value="Food" ' . ($item['category'] === 'Food' ? 'selected' : '') . '>Food</option>
-                                            <option value="Cafe" ' . ($item['category'] === 'Cafe' ? 'selected' : '') . '>Cafe</option>
-                                            <option value="Date" ' . ($item['category'] === 'Date' ? 'selected' : '') . '>Date</option>
-                                            <option value="Vacation" ' . ($item['category'] === 'Vacation' ? 'selected' : '') . '>Vacation</option>
-                                            <option value="Travel" ' . ($item['category'] === 'Travel' ? 'selected' : '') . '>Travel</option>
-                                            <option value="Other" ' . ($item['category'] === 'Other' ? 'selected' : '') . '>Other</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Status</label>
-                                        <select name="status">
-                                            <option value="DREAM" ' . ($item['status'] === 'DREAM' ? 'selected' : '') . '>Dream</option>
-                                            <option value="PLANNED" ' . ($item['status'] === 'PLANNED' ? 'selected' : '') . '>Planned</option>
-                                            <option value="VISITED" ' . ($item['status'] === 'VISITED' ? 'selected' : '') . '>Visited</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group"><label>Target Date</label><input type="date" name="target_date" value="' . ($item['target_date'] ?? '') . '"></div>
-                                    <button type="submit" class="btn">Update</button>
-                                </form>
-                            '); ?>`)">Edit</button>
-                            <a href="/eternity/places.php?delete=<?php echo $item['id']; ?>" class="btn" style="background:#000;color:#fff;padding:6px 12px;font-size:0.8rem;" onclick="return confirm('Yakin hapus?')">Hapus</a>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
+        <?php if (empty($places)): ?>
+            <div class="empty-state">
+                <div class="emoji">🌍</div>
+                <p>Belum ada tempat. Mulai rencanakan petualanganmu.</p>
             </div>
+        <?php else: ?>
+            <?php foreach ($places as $place): ?>
+                <div class="card" style="margin-bottom:15px;">
+                    <h3><?php echo htmlspecialchars($place['name']); ?></h3>
+                    <p><?php echo htmlspecialchars($place['description'] ?? ''); ?></p>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <?php if (!empty($place['category'])): ?>
+                            <span class="badge"><?php echo htmlspecialchars($place['category']); ?></span>
+                        <?php endif; ?>
+                        <span class="badge badge-<?php echo strtolower($place['status'] ?? 'DREAM'); ?>">
+                            <?php echo htmlspecialchars($place['status'] ?? 'DREAM'); ?>
+                        </span>
+                        <?php if (!empty($place['target_date'])): ?>
+                            <span class="badge">Target: <?php echo formatDate($place['target_date']); ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <div style="margin-top:10px; display:flex; gap:10px;">
+                        <button class="btn btn-secondary" onclick="openModal(`<?php echo htmlspecialchars('
+                            <h2>Edit Tempat</h2>
+                            <form method="POST" action="places.php">
+                                <input type="hidden" name="id" value="' . $place['id'] . '">
+                                <div class="form-group"><label>Nama Tempat</label><input type="text" name="name" value="' . htmlspecialchars($place['name']) . '" required></div>
+                                <div class="form-group"><label>Deskripsi</label><textarea name="description" rows="3">' . htmlspecialchars($place['description'] ?? '') . '</textarea></div>
+                                <div class="form-group">
+                                    <label>Kategori</label>
+                                    <select name="category">
+                                        <option value="Food" ' . ($place['category'] == 'Food' ? 'selected' : '') . '>Food</option>
+                                        <option value="Cafe" ' . ($place['category'] == 'Cafe' ? 'selected' : '') . '>Cafe</option>
+                                        <option value="Date" ' . ($place['category'] == 'Date' ? 'selected' : '') . '>Date</option>
+                                        <option value="Vacation" ' . ($place['category'] == 'Vacation' ? 'selected' : '') . '>Vacation</option>
+                                        <option value="Travel" ' . ($place['category'] == 'Travel' ? 'selected' : '') . '>Travel</option>
+                                        <option value="Other" ' . ($place['category'] == 'Other' ? 'selected' : '') . '>Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Status</label>
+                                    <select name="status">
+                                        <option value="DREAM" ' . ($place['status'] == 'DREAM' ? 'selected' : '') . '>Dream</option>
+                                        <option value="PLANNED" ' . ($place['status'] == 'PLANNED' ? 'selected' : '') . '>Planned</option>
+                                        <option value="VISITED" ' . ($place['status'] == 'VISITED' ? 'selected' : '') . '>Visited</option>
+                                    </select>
+                                </div>
+                                <div class="form-group"><label>Target Date</label><input type="date" name="target_date" value="' . ($place['target_date'] ?? '') . '"></div>
+                                <button type="submit" class="btn">Update</button>
+                            </form>
+                        '); ?>`)">Edit</button>
+                        <a href="places.php?delete=<?php echo $place['id']; ?>" class="btn" style="background:#000;color:#fff;" onclick="return confirm('Yakin hapus?')">Hapus</a>
+                    </div>
+                </div>
+            <?php endforeach; ?>
         <?php endif; ?>
     </div>
 </div>
