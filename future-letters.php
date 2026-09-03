@@ -5,91 +5,83 @@ requireAuth();
 require_once 'includes/functions.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? 'create';
     $data = [
         'title' => $_POST['title'] ?? '',
         'content' => $_POST['content'] ?? '',
-        'unlock_date' => $_POST['unlock_date'] ?? ''
+        'unlock_date' => $_POST['unlock_date'] ?? date('Y-m-d', strtotime('+1 year'))
     ];
-    if ($action === 'create') {
-        createRecord('future_letters', $data);
-    } elseif ($action === 'update' && isset($_POST['id'])) {
+    
+    if (isset($_POST['id']) && !empty($_POST['id'])) {
         updateRecord('future_letters', $_POST['id'], $data);
+    } else {
+        createRecord('future_letters', $data);
     }
-    redirect('/eternity/future-letters.php');
+    redirect('future-letters.php');
 }
 
 if (isset($_GET['delete'])) {
     deleteRecord('future_letters', $_GET['delete']);
-    redirect('/eternity/future-letters.php');
+    redirect('future-letters.php');
 }
 
-$items = getAll('future_letters');
-usort($items, function($a, $b) {
-    return strtotime($a['unlock_date']) - strtotime($b['unlock_date']);
-});
-
-function isLocked($unlockDate) {
-    return strtotime($unlockDate) > time();
-}
+$futureLetters = getAll('future_letters');
+$today = new DateTime('now', new DateTimeZone('Asia/Jakarta'));
 ?>
 <?php $page_title = 'Future Letters'; include 'includes/header.php'; include 'includes/navbar.php'; ?>
 <div class="container">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-        <h1>🔮 Future Letters</h1>
-        <button class="btn btn-secondary" onclick="openModal(`<?php echo escape('
-            <h2>Tambah Future Letter</h2>
-            <form method="POST">
-                <input type="hidden" name="action" value="create">
+        <h1>🔒 Future Letters</h1>
+        <button class="btn btn-secondary" onclick="openModal(`<?php echo htmlspecialchars('
+            <h2>Buat Future Letter</h2>
+            <form method="POST" action="future-letters.php">
                 <div class="form-group"><label>Judul</label><input type="text" name="title" required></div>
-                <div class="form-group"><label>Isi Surat</label><textarea name="content" rows="6" required></textarea></div>
+                <div class="form-group"><label>Isi</label><textarea name="content" rows="6" required></textarea></div>
                 <div class="form-group"><label>Tanggal Buka</label><input type="date" name="unlock_date" required></div>
                 <button type="submit" class="btn">Simpan</button>
             </form>
-        '); ?>`)">Tambah</button>
+        '); ?>`)">Buat Future Letter</button>
     </div>
     <div style="margin-top:20px;">
-        <?php if (empty($items)): ?>
-            <div class="empty-state"><div class="emoji">🔮</div><p>Belum ada surat masa depan.</p></div>
-        <?php else: ?>
-            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:20px;">
-                <?php foreach ($items as $item): ?>
-                    <?php $locked = isLocked($item['unlock_date']); ?>
-                    <div class="card" style="<?php echo $locked ? 'opacity:0.7;' : ''; ?>">
-                        <div style="display:flex; justify-content:space-between; align-items:start;">
-                            <h3><?php echo $locked ? '🔒' : '📬'; ?> <?php echo escape($item['title']); ?></h3>
-                            <span class="badge <?php echo $locked ? 'badge-primary' : 'badge-green'; ?>">
-                                <?php echo $locked ? '🔒 LOCKED' : '✅ UNLOCKED'; ?>
-                            </span>
-                        </div>
-                        <div style="margin:10px 0;">
-                            <span class="badge">📅 Opens: <?php echo formatDate($item['unlock_date']); ?></span>
-                            <?php if ($locked): ?>
-                                <p style="color:#888; font-style:italic; margin-top:10px;">⏳ Surat ini akan terbuka pada <?php echo formatDate($item['unlock_date']); ?></p>
-                            <?php else: ?>
-                                <div style="background:#f5f5f5; padding:15px; border:2px solid var(--black); border-radius:var(--radius); margin-top:10px;">
-                                    <?php echo nl2br(escape($item['content'])); ?>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                        <div class="badge" style="margin-top:10px;">Dibuat: <?php echo formatDateTime($item['created_at']); ?></div>
-                        <div style="margin-top:15px; display:flex; gap:10px;">
-                            <button class="btn btn-secondary" style="padding:6px 12px;font-size:0.8rem;" onclick="openModal(`<?php echo escape('
-                                <h2>Edit Future Letter</h2>
-                                <form method="POST">
-                                    <input type="hidden" name="action" value="update">
-                                    <input type="hidden" name="id" value="' . $item['id'] . '">
-                                    <div class="form-group"><label>Judul</label><input type="text" name="title" value="' . escape($item['title']) . '" required></div>
-                                    <div class="form-group"><label>Isi Surat</label><textarea name="content" rows="6" required>' . escape($item['content']) . '</textarea></div>
-                                    <div class="form-group"><label>Tanggal Buka</label><input type="date" name="unlock_date" value="' . $item['unlock_date'] . '" required></div>
-                                    <button type="submit" class="btn">Update</button>
-                                </form>
-                            '); ?>`)">Edit</button>
-                            <a href="/eternity/future-letters.php?delete=<?php echo $item['id']; ?>" class="btn" style="background:#000;color:#fff;padding:6px 12px;font-size:0.8rem;" onclick="return confirm('Yakin hapus?')">Hapus</a>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
+        <?php if (empty($futureLetters)): ?>
+            <div class="empty-state">
+                <div class="emoji">📮</div>
+                <p>Belum ada future letters. Kirim pesan untuk masa depan.</p>
             </div>
+        <?php else: ?>
+            <?php foreach ($futureLetters as $letter): 
+                $unlockDate = new DateTime($letter['unlock_date'], new DateTimeZone('Asia/Jakarta'));
+                $isUnlocked = ($today >= $unlockDate);
+            ?>
+                <div class="card" style="margin-bottom:15px; <?php echo $isUnlocked ? 'border-color:var(--green);' : ''; ?>">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3><?php echo $isUnlocked ? '📬' : '🔒'; ?> <?php echo htmlspecialchars($letter['title']); ?></h3>
+                        <span class="badge <?php echo $isUnlocked ? 'badge-green' : ''; ?>">
+                            <?php echo $isUnlocked ? 'UNLOCKED' : 'LOCKED'; ?>
+                        </span>
+                    </div>
+                    <p><small>Buka pada: <?php echo formatDate($letter['unlock_date']); ?></small></p>
+                    <?php if ($isUnlocked): ?>
+                        <p><?php echo nl2br(htmlspecialchars($letter['content'])); ?></p>
+                    <?php else: ?>
+                        <div style="background:#f0f0f0; padding:20px; border:var(--border-thick); border-radius:var(--radius); text-align:center;">
+                            🔒 Surat ini terkunci sampai <?php echo formatDate($letter['unlock_date']); ?>
+                        </div>
+                    <?php endif; ?>
+                    <div style="margin-top:10px; display:flex; gap:10px;">
+                        <button class="btn btn-secondary" onclick="openModal(`<?php echo htmlspecialchars('
+                            <h2>Edit Future Letter</h2>
+                            <form method="POST" action="future-letters.php">
+                                <input type="hidden" name="id" value="' . $letter['id'] . '">
+                                <div class="form-group"><label>Judul</label><input type="text" name="title" value="' . htmlspecialchars($letter['title']) . '" required></div>
+                                <div class="form-group"><label>Isi</label><textarea name="content" rows="6" required>' . htmlspecialchars($letter['content']) . '</textarea></div>
+                                <div class="form-group"><label>Tanggal Buka</label><input type="date" name="unlock_date" value="' . $letter['unlock_date'] . '" required></div>
+                                <button type="submit" class="btn">Update</button>
+                            </form>
+                        '); ?>`)">Edit</button>
+                        <a href="future-letters.php?delete=<?php echo $letter['id']; ?>" class="btn" style="background:#000;color:#fff;" onclick="return confirm('Yakin hapus?')">Hapus</a>
+                    </div>
+                </div>
+            <?php endforeach; ?>
         <?php endif; ?>
     </div>
 </div>
