@@ -7,6 +7,8 @@ function escape($string) {
 }
 
 function redirect($url) {
+    // Hapus slash di depan jika ada
+    $url = ltrim($url, '/');
     header("Location: $url");
     exit;
 }
@@ -27,7 +29,8 @@ function getRelationshipDuration($startDate) {
         'days' => $diff->days,
         'hours' => $diff->h,
         'minutes' => $diff->i,
-        'seconds' => $diff->s
+        'seconds' => $diff->s,
+        'total_days' => $diff->days,
     ];
 }
 
@@ -49,6 +52,10 @@ function getAnniversaryCountdown($anniversaryMonth, $anniversaryDay) {
 function generateStorageUrl($path) {
     return SUPABASE_URL . '/storage/v1/object/public/' . $path;
 }
+
+// ============================================
+// FUNGSI CRUD DENGAN SUPABASE REST API
+// ============================================
 
 function supabaseRequest($method, $endpoint, $body = null) {
     $url = SUPABASE_URL . '/rest/v1/' . $endpoint;
@@ -79,6 +86,7 @@ function supabaseRequest($method, $endpoint, $body = null) {
     ];
 }
 
+// Contoh: get all from table
 function getAll($table) {
     $result = supabaseRequest('GET', $table . '?select=*');
     return $result['data'] ?? [];
@@ -98,9 +106,10 @@ function updateRecord($table, $id, $data) {
 }
 
 function deleteRecord($table, $id) {
-    return supabaseRequest('DELETE', $table . '?id=eq.' . $id, $data);
+    return supabaseRequest('DELETE', $table . '?id=eq.' . $id);
 }
 
+// Upload file ke Supabase Storage
 function uploadFile($bucket, $path, $fileData, $mimeType) {
     $url = SUPABASE_URL . '/storage/v1/object/' . $bucket . '/' . $path;
     $headers = [
